@@ -1,0 +1,1613 @@
+/* ═══════════════════════════════════════════════════════════
+   JEM APP — Jinja Explorer Marathon SPA
+   Hash-based routing · 11 pages · Forms · Soundboard
+   ═══════════════════════════════════════════════════════════ */
+
+const S = CONFIG.site;
+const app = document.getElementById('app');
+
+/* ─── ANALYTICS HOOKS ─── */
+function trackEvent(event, detail) {
+  console.log(`[JEM Analytics] ${event}`, detail || '');
+  if (window.dataLayer) window.dataLayer.push({ event, detail });
+}
+
+/* ─── TOAST ─── */
+function showToast(msg, type = 'success') {
+  const old = document.querySelector('.toast');
+  if (old) old.remove();
+  const t = document.createElement('div');
+  t.className = `toast toast--${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+/* ─── MOBILE NAV ─── */
+function toggleMobileNav() {
+  document.getElementById('mobileNav').classList.toggle('open');
+}
+
+/* ─── FORM HELPERS ─── */
+function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+function validatePhone(p) { return /^[\+]?[\d\s\-()]{7,}$/.test(p); }
+
+function getFormData(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return null;
+  const data = {};
+  form.querySelectorAll('input, select, textarea').forEach(el => {
+    if (el.name && !el.classList.contains('ohnohoney')) {
+      if (el.type === 'checkbox') data[el.name] = el.checked;
+      else data[el.name] = el.value.trim();
+    }
+  });
+  return data;
+}
+
+function setFieldError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('error');
+  let err = el.parentNode.querySelector('.form-error');
+  if (!err) { err = document.createElement('div'); err.className = 'form-error'; el.parentNode.appendChild(err); }
+  err.textContent = msg;
+}
+
+function clearErrors(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+  form.querySelectorAll('.error').forEach(e => e.classList.remove('error'));
+  form.querySelectorAll('.form-error').forEach(e => e.remove());
+}
+
+/* ─── FOOTER NEWSLETTER ─── */
+function submitFooterNewsletter() {
+  const email = document.getElementById('footerEmail').value.trim();
+  if (!validateEmail(email)) { showToast('Please enter a valid email', 'error'); return; }
+  trackEvent('newsletter_signup', email);
+  showToast('Thanks for subscribing! 🎉');
+  document.getElementById('footerEmail').value = '';
+}
+
+/* ─── ROUTING ─── */
+function getRoute() {
+  const hash = window.location.hash.replace('#', '') || '/';
+  return hash;
+}
+
+function navigate(route) {
+  window.location.hash = '#' + route;
+}
+
+function updateActiveLinks(route) {
+  document.querySelectorAll('[data-route]').forEach(link => {
+    link.classList.toggle('active', link.getAttribute('data-route') === route);
+  });
+}
+
+function updateMeta(route) {
+  const seo = CONFIG.seo[route];
+  if (seo) {
+    document.title = seo.title;
+    document.querySelector('meta[name="description"]').content = seo.desc;
+  }
+}
+
+/* ─── PAGE RENDERERS ─── */
+
+function renderHome() {
+  return `
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container hero__content">
+        <div class="hero__label">📍 ${S.location} · ${S.date}</div>
+        <h1 class="t-display t-hero hero__title">${S.name}</h1>
+        <p class="hero__subtitle">${S.tagline}</p>
+        <div class="hero__actions">
+          <a href="#/register" class="btn btn--gold btn--lg" onclick="trackEvent('register_click','hero')">Register Now</a>
+          <a href="#/explore-jinja" class="btn btn--outline-white" onclick="trackEvent('itinerary_click','hero')">Explore Jinja</a>
+          <a href="#/sponsors" class="btn btn--outline-white">Become a Sponsor</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUICK FACTS BAR -->
+    <section class="section" style="margin-top:-48px;position:relative;z-index:3">
+      <div class="container">
+        <div class="facts-bar">
+          <div class="facts-bar__item">
+            <div class="facts-bar__value">4 Distances</div>
+            <div class="facts-bar__label">5K · 10K · 21K · 42K</div>
+          </div>
+          <div class="facts-bar__item">
+            <div class="facts-bar__value">${S.date}</div>
+            <div class="facts-bar__label">Race Weekend</div>
+          </div>
+          <div class="facts-bar__item">
+            <div class="facts-bar__value">06:00 AM</div>
+            <div class="facts-bar__label">Marathon Gun Time</div>
+          </div>
+          <div class="facts-bar__item">
+            <div class="facts-bar__value">Jinja City</div>
+            <div class="facts-bar__label">Source of the Nile</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY EXPLORER -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <span class="badge badge--gold section-head__label">Why Explorer?</span>
+          <h2 class="t-display t-h1 section-head__title">More Than a Marathon</h2>
+          <p class="section-head__desc">${S.story}</p>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="card__img">🏃</div>
+            <div class="card__body">
+              <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:8px">World-Class Race</h3>
+              <p class="t-small text-mid">Certified course, professional timing, medical support, and operational standards benchmarked against international marathons.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__img" style="background:linear-gradient(135deg,#2E86AB,#1C2D4F)">🌊</div>
+            <div class="card__body">
+              <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:8px">Adventure Capital</h3>
+              <p class="t-small text-mid">Jinja offers white-water rafting, bungee jumping, quad biking, and Nile cruises — turn your race into a weekend adventure.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__img" style="background:linear-gradient(135deg,#C8963E,#C45B28)">🎶</div>
+            <div class="card__body">
+              <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:8px">Busoga Culture</h3>
+              <p class="t-small text-mid">Experience the Embaire xylophone, Bigwala trumpets, and Engalabi drums — the living heritage of Busoga Kingdom on course.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PILLARS -->
+    <section class="section" style="background:var(--white)">
+      <div class="container">
+        <div class="section-head">
+          <span class="badge badge--navy section-head__label">Our Pillars</span>
+          <h2 class="t-display t-h1 section-head__title">The Explorer Values</h2>
+        </div>
+        <div class="grid-5">
+          ${CONFIG.pillars.map(p => `
+            <div class="pillar-card">
+              <span class="pillar-card__icon" style="color:${p.color}">${p.icon}</span>
+              <h3 class="pillar-card__title" style="color:${p.color}">${p.title}</h3>
+              <p class="pillar-card__desc">${p.desc}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURED: FEES + COURSE + RACE WEEK -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="t-display t-h1 section-head__title">Race Essentials</h2>
+          <p class="section-head__desc">Everything you need to know at a glance.</p>
+        </div>
+        <div class="grid-3">
+          <!-- Fees snapshot -->
+          <div class="card">
+            <div class="card__body">
+              <span class="badge badge--gold mb-12">Entry Fees</span>
+              <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:16px">Race Categories & Pricing</h3>
+              ${CONFIG.fees.map(f => `
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:0.85rem">
+                  <span style="font-weight:600">${f.category}</span>
+                  <span style="color:var(--gold);font-weight:700">${f.early}</span>
+                </div>
+              `).join('')}
+              <p class="t-xs text-light mt-24">Early bird prices shown. <a href="#/register" style="color:var(--gold)">See all pricing →</a></p>
+            </div>
+          </div>
+          <!-- Course snapshot -->
+          <div class="card">
+            <div class="card__img" style="height:180px">🗺️</div>
+            <div class="card__body">
+              <span class="badge badge--teal mb-12">The Course</span>
+              <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:12px">Run Along the Nile</h3>
+              <p class="t-small text-mid mb-16">A scenic, certified route through Jinja City, across the Nile Bridge, past cultural gates and adventure corridors.</p>
+              <a href="#/course" class="btn btn--outline btn--sm">View Course →</a>
+            </div>
+          </div>
+          <!-- Race week snapshot -->
+          <div class="card">
+            <div class="card__body">
+              <span class="badge badge--copper mb-12">Race Week</span>
+              <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:16px">Thu–Sun Programme</h3>
+              ${CONFIG.raceWeekSchedule.slice(0, 3).map(d => `
+                <div style="margin-bottom:12px">
+                  <div style="font-weight:700;font-size:0.82rem;color:var(--navy);margin-bottom:4px">${d.day}</div>
+                  <div style="font-size:0.8rem;color:var(--text-mid)">${d.events[0]}</div>
+                </div>
+              `).join('')}
+              <a href="#/race-week" class="btn btn--outline btn--sm mt-24">Full Schedule →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPLORE JINJA TEASER -->
+    <section class="section" style="background:var(--white)">
+      <div class="container">
+        <div class="section-head">
+          <span class="badge badge--green section-head__label">Tourism</span>
+          <h2 class="t-display t-h1 section-head__title">Plan Your Explorer Weekend</h2>
+          <p class="section-head__desc">Three curated itineraries to make the most of your time in Jinja.</p>
+        </div>
+        <div class="grid-3">
+          ${CONFIG.itineraries.map(it => `
+            <div class="itinerary-card" onclick="navigate('/explore-jinja');trackEvent('itinerary_click','${it.title}')">
+              <div class="itinerary-card__header" style="background:linear-gradient(135deg,${it.color},${it.color}dd)">
+                <div class="itinerary-card__emoji">${it.emoji}</div>
+                <div class="itinerary-card__title">${it.title}</div>
+              </div>
+              <div class="itinerary-card__body">
+                ${it.highlights.map(h => `
+                  <div class="itinerary-card__item">
+                    <div class="itinerary-card__bullet" style="background:${it.color}"></div>
+                    ${h}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- CULTURE TEASER -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <span class="badge badge--copper section-head__label">Culture</span>
+          <h2 class="t-display t-h1 section-head__title">The Sound of Busoga</h2>
+          <p class="section-head__desc">Hear the instruments that will power your race experience.</p>
+        </div>
+        <div class="grid-3">
+          ${CONFIG.instruments.slice(0, 3).map(inst => `
+            <div class="instrument-card">
+              <div class="instrument-card__visual">
+                <span class="instrument-card__emoji">${inst.emoji}</span>
+                <button class="instrument-card__play" onclick="event.stopPropagation();playSound('${inst.id}',this)" title="Play ${inst.name}">▶</button>
+              </div>
+              <div class="instrument-card__body">
+                <h3 class="instrument-card__name">${inst.name}</h3>
+                <span class="badge badge--${inst.tag === 'Protocol' ? 'gold' : inst.tag === 'Hype' ? 'copper' : inst.tag === 'Chill' ? 'teal' : 'navy'} instrument-card__tag">${inst.tag}</span>
+                <p class="instrument-card__desc">${inst.desc}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="text-center mt-32">
+          <a href="#/culture" class="btn btn--navy">Explore Full Soundboard →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPONSORS STRIP -->
+    <section class="section" style="background:var(--white)">
+      <div class="container text-center">
+        <span class="badge badge--navy mb-16">Partners</span>
+        <h2 class="t-display t-h2 mb-24">Our Sponsors & Partners</h2>
+        <div class="sponsor-strip mb-32">
+          <div class="sponsor-strip__logo">Sponsor 1</div>
+          <div class="sponsor-strip__logo">Sponsor 2</div>
+          <div class="sponsor-strip__logo">Sponsor 3</div>
+          <div class="sponsor-strip__logo">Sponsor 4</div>
+          <div class="sponsor-strip__logo">Sponsor 5</div>
+        </div>
+        <a href="#/sponsors" class="btn btn--outline">Become a Partner →</a>
+      </div>
+    </section>
+
+    <!-- FAQ PREVIEW -->
+    <section class="section">
+      <div class="container" style="max-width:760px">
+        <div class="section-head">
+          <h2 class="t-display t-h1 section-head__title">Frequently Asked Questions</h2>
+        </div>
+        <div id="homeFaqs">
+          ${CONFIG.faqs.map((faq, i) => `
+            <div class="faq-item" onclick="toggleFaq(this)">
+              <button class="faq-item__q">${faq.q}<span class="faq-item__arrow">▾</span></button>
+              <div class="faq-item__a"><div class="faq-item__a-inner">${faq.a}</div></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- NEWSLETTER / TWEGAITE -->
+    <section class="section" style="background:var(--white)">
+      <div class="container" style="max-width:680px">
+        <div class="twegaite-block text-center">
+          <div style="font-size:2rem;margin-bottom:12px">🤝</div>
+          <h2 class="twegaite-block__title">Twegaite — Come Together</h2>
+          <p class="twegaite-block__sub">Join the Explorer community</p>
+          <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;margin-bottom:24px">Sign up for race updates, travel tips, and invitations to be part of the Jinja Explorer Marathon community.</p>
+          <div style="display:flex;gap:8px;max-width:400px;margin:0 auto">
+            <input type="email" placeholder="Your email" id="twegaiteEmail" class="form-input" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:white">
+            <button class="btn btn--gold" onclick="submitTwegaiteHome()">Join</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderAbout() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--gold mb-12">Our Story</span>
+        <h1 class="t-display t-h1 page-hero__title">About the Jinja Explorer Marathon</h1>
+        <p class="page-hero__desc">Discover the story behind East Africa's most distinctive destination marathon.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container" style="max-width:800px">
+        <h2 class="t-display t-h2 mb-24">The Gateway to Busoga</h2>
+        <p class="text-mid mb-16">Jinja sits at the source of the River Nile, where Lake Victoria pours into one of the world's greatest rivers. For centuries, it has been the gateway to the Busoga Kingdom — a vibrant cultural region with its own language, royal traditions, and living heritage of music and storytelling.</p>
+        <p class="text-mid mb-16">Today, Jinja is also Uganda's adventure capital. White-water rafting, bungee jumping, kayaking, and wildlife experiences draw visitors from around the world. The Jinja Explorer Marathon brings these worlds together — elite athletics, cultural celebration, and adventure tourism — in a single destination race weekend.</p>
+        <p class="text-mid mb-32">Our mission is to build a world-class annual marathon that celebrates Busoga culture, drives sustainable tourism to Jinja, and creates lasting economic and social value for the community.</p>
+
+        <div class="divider"></div>
+
+        <h2 class="t-display t-h2 mb-24 mt-48">The Explorer Pillars</h2>
+        <div class="grid-2 mb-48">
+          ${CONFIG.pillars.map(p => `
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <span style="font-size:1.5rem;color:${p.color};flex-shrink:0;margin-top:2px">${p.icon}</span>
+              <div>
+                <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:6px;color:${p.color}">${p.title}</h3>
+                <p class="t-small text-mid">${p.desc}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <h2 class="t-display t-h2 mb-24 mt-48">Organising Team</h2>
+        <div class="grid-3 mb-48">
+          ${['Race Director', 'Operations Lead', 'Culture & Tourism Lead'].map(role => `
+            <div class="card">
+              <div class="card__img" style="height:160px;font-size:2rem">👤</div>
+              <div class="card__body text-center">
+                <h4 style="font-weight:700;margin-bottom:4px">Name TBC</h4>
+                <p class="t-small text-light">${role}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <h2 class="t-display t-h2 mb-16">Governance & Partners</h2>
+        <p class="text-mid mb-32">The Jinja Explorer Marathon is organised in collaboration with local government, the Busoga Kingdom cultural authority, Uganda Athletics Federation, and certified race operations partners. Full governance and advisory details will be published ahead of the event.</p>
+
+        <div class="gap-center mt-32">
+          <a href="#/register" class="btn btn--gold" onclick="trackEvent('register_click','about')">Register Now</a>
+          <a href="#/sponsors" class="btn btn--outline">Become a Sponsor</a>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderRegister() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--gold mb-12">Entry</span>
+        <h1 class="t-display t-h1 page-hero__title">Register for JEM 2026</h1>
+        <p class="page-hero__desc">Secure your place at the Jinja Explorer Marathon. ${S.date}, ${S.location}.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- FEES TABLE -->
+        <div class="grid-2" style="gap:32px;align-items:start">
+          <div>
+            <h2 class="t-display t-h2 mb-16">Entry Fees</h2>
+            <div class="table-wrap mb-24">
+              <table>
+                <thead>
+                  <tr><th>Category</th><th>Early Bird</th><th>Regular</th><th>International</th></tr>
+                </thead>
+                <tbody>
+                  ${CONFIG.fees.map(f => `
+                    <tr><td style="font-weight:600">${f.category}</td><td style="color:var(--gold);font-weight:700">${f.early}</td><td>${f.regular}</td><td>${f.intl}</td></tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            <p class="t-small text-light">Early bird pricing available until 30 days before race day. All fees are non-refundable. Transfers permitted up to 14 days before race day.</p>
+          </div>
+          <div>
+            <h2 class="t-display t-h2 mb-16">Start Times</h2>
+            <div class="table-wrap mb-24">
+              <table>
+                <thead>
+                  <tr><th>Event</th><th>Gun Time</th><th>Assembly</th></tr>
+                </thead>
+                <tbody>
+                  ${CONFIG.startTimes.map(t => `
+                    <tr><td style="font-weight:600">${t.event}</td><td style="color:var(--gold);font-weight:700">${t.time}</td><td>${t.assembly}</td></tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- WHAT'S INCLUDED -->
+        <h2 class="t-display t-h2 mb-24">What's Included</h2>
+        <div class="grid-3 mb-48">
+          ${['Race bib with timing chip', 'Finisher medal', 'Official race t-shirt', 'Hydration on course', 'Medical support', 'Post-race refreshments', 'Digital finisher certificate', 'Expo access', 'Route support & marshals'].map(item => `
+            <div class="checklist-item"><span class="checklist-check">✓</span>${item}</div>
+          `).join('')}
+        </div>
+
+        <!-- HOW REGISTRATION WORKS -->
+        <h2 class="t-display t-h2 mb-24">How to Register</h2>
+        <div class="steps mb-48" style="max-width:600px">
+          <div class="step-item"><div class="step-num">1</div><div class="step-content"><div class="step-title">Fill in the form below</div><div class="step-desc">Provide your details, select your category, and choose a t-shirt size.</div></div></div>
+          <div class="step-item"><div class="step-num">2</div><div class="step-content"><div class="step-title">Make payment</div><div class="step-desc">Pay via MTN/Airtel Mobile Money, bank transfer, or international card.</div></div></div>
+          <div class="step-item"><div class="step-num">3</div><div class="step-content"><div class="step-title">Receive confirmation</div><div class="step-desc">You'll get an email and SMS confirmation with your registration number.</div></div></div>
+          <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-title">Collect your bib at the Expo</div><div class="step-desc">Bring your ID and confirmation to the Expo (Thursday or Friday) to pick up your race kit.</div></div></div>
+        </div>
+
+        <!-- REGISTRATION FORM -->
+        <div style="max-width:700px;margin:0 auto">
+          <h2 class="t-display t-h2 mb-8">Registration Form</h2>
+          <p class="text-mid mb-24">Complete your registration below. Fields marked * are required.</p>
+
+          <div id="regFormContainer">
+            <div id="registrationForm">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">First Name *</label>
+                  <input type="text" name="firstName" id="regFirstName" class="form-input" required placeholder="First name">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Last Name *</label>
+                  <input type="text" name="lastName" id="regLastName" class="form-input" required placeholder="Last name">
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Email *</label>
+                  <input type="email" name="email" id="regEmail" class="form-input" required placeholder="you@email.com">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Phone *</label>
+                  <input type="tel" name="phone" id="regPhone" class="form-input" required placeholder="+256 7XX XXX XXX">
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Race Category *</label>
+                  <select name="category" id="regCategory" class="form-select">
+                    <option value="">Select category</option>
+                    ${CONFIG.fees.map(f => `<option value="${f.category}">${f.category}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">T-Shirt Size *</label>
+                  <select name="tshirt" id="regTshirt" class="form-select">
+                    <option value="">Select size</option>
+                    <option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Gender</label>
+                  <select name="gender" id="regGender" class="form-select">
+                    <option value="">Select</option>
+                    <option>Male</option><option>Female</option><option>Non-binary</option><option>Prefer not to say</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Date of Birth</label>
+                  <input type="date" name="dob" id="regDob" class="form-input">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nationality</label>
+                <input type="text" name="nationality" id="regNationality" class="form-input" placeholder="Country">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Emergency Contact Name & Phone</label>
+                <input type="text" name="emergency" id="regEmergency" class="form-input" placeholder="Name — +256 7XX XXX XXX">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Team / Running Club (optional)</label>
+                <input type="text" name="club" id="regClub" class="form-input" placeholder="Club name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Promo / Discount Code</label>
+                <input type="text" name="promo" id="regPromo" class="form-input" placeholder="Enter code if applicable">
+              </div>
+              <!-- Honeypot -->
+              <div class="ohnohoney">
+                <input type="text" name="website" id="regHoney" tabindex="-1" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label class="form-check">
+                  <input type="checkbox" name="terms" id="regTerms">
+                  I agree to the race terms, conditions, and waiver. I understand entries are non-refundable. *
+                </label>
+              </div>
+              <div class="form-group">
+                <label class="form-check">
+                  <input type="checkbox" name="newsletter" id="regNewsletter" checked>
+                  Send me race updates and Jinja travel tips by email.
+                </label>
+              </div>
+              <button class="btn btn--gold btn--lg" style="width:100%;margin-top:8px" onclick="submitRegistration()">Complete Registration</button>
+            </div>
+          </div>
+          <div style="margin-top:24px;padding:20px;background:var(--cream-dark);border-radius:var(--radius);font-size:0.85rem;color:var(--text-mid)">
+            <strong style="color:var(--navy)">Payment Options:</strong><br>
+            Mobile Money: MTN — Airtel (details sent after form submission)<br>
+            Bank Transfer: Details provided on confirmation email<br>
+            International: Visa/Mastercard via secure payment link
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- REGISTRATION FAQS -->
+        <h2 class="t-display t-h2 mb-24" style="max-width:700px;margin-left:auto;margin-right:auto">Registration FAQs</h2>
+        <div style="max-width:700px;margin:0 auto">
+          ${CONFIG.faqs.filter(f => f.q.toLowerCase().includes('refund') || f.q.toLowerCase().includes('age') || f.q.toLowerCase().includes('included') || f.q.toLowerCase().includes('register')).map(faq => `
+            <div class="faq-item" onclick="toggleFaq(this)">
+              <button class="faq-item__q">${faq.q}<span class="faq-item__arrow">▾</span></button>
+              <div class="faq-item__a"><div class="faq-item__a-inner">${faq.a}</div></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderCourse() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--teal mb-12">The Route</span>
+        <h1 class="t-display t-h1 page-hero__title">Course & Route</h1>
+        <p class="page-hero__desc">Run along the Nile through Jinja City — a scenic, certified marathon route.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- Map placeholder -->
+        <div style="background:linear-gradient(135deg,var(--navy-mid),var(--navy-deep));border-radius:var(--radius-lg);height:360px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:1.2rem;margin-bottom:24px">
+          🗺️ Interactive Route Map — Coming Soon
+        </div>
+
+        <!-- Route downloads -->
+        <h2 class="t-display t-h2 mb-24">Download Route Files</h2>
+        <div class="grid-4 mb-48">
+          ${Object.entries(CONFIG.routeLinks).map(([dist, links]) => `
+            <div class="route-card">
+              <div class="route-card__title">${dist} Route</div>
+              <div class="route-card__links">
+                <a href="${links.gpx}" class="btn btn--outline btn--sm" onclick="trackEvent('gpx_download','${dist}')">📥 GPX</a>
+                <a href="${links.strava}" target="_blank" class="btn btn--outline btn--sm">Strava</a>
+                <a href="${links.google}" target="_blank" class="btn btn--outline btn--sm">Maps</a>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Explorer Markers -->
+        <h2 class="t-display t-h2 mb-24">Explorer Markers</h2>
+        <p class="text-mid mb-32">Key landmarks and cultural zones along the marathon route.</p>
+        <div class="marker-timeline mb-48" style="max-width:650px">
+          ${CONFIG.courseMarkers.map(m => `
+            <div class="marker-item">
+              <div class="marker-item__km">${m.km}</div>
+              <h3 class="marker-item__name">${m.name}</h3>
+              <p class="marker-item__desc">${m.desc}</p>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Aid Stations -->
+        <h2 class="t-display t-h2 mb-24">Aid Stations & Medical Support</h2>
+        <div class="table-wrap mb-48">
+          <table>
+            <thead>
+              <tr><th>Station</th><th>Location</th><th>Water</th><th>Electrolytes</th><th>Medical</th></tr>
+            </thead>
+            <tbody>
+              ${CONFIG.aidStations.map(a => `
+                <tr>
+                  <td style="font-weight:600">${a.name}</td>
+                  <td>${a.location}</td>
+                  <td>${a.water ? '✓' : '—'}</td>
+                  <td>${a.electrolytes ? '✓' : '—'}</td>
+                  <td><span class="badge ${a.medical === 'Paramedic' ? 'badge--copper' : 'badge--green'}">${a.medical}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Safety & Transport -->
+        <div class="grid-2">
+          <div>
+            <h2 class="t-display t-h2 mb-16">Safety Notes</h2>
+            <div class="checklist-item"><span class="checklist-check">✓</span>Ambulances stationed at KM 0, 15, 30, and finish</div>
+            <div class="checklist-item"><span class="checklist-check">✓</span>Course fully marshalled with traffic control</div>
+            <div class="checklist-item"><span class="checklist-check">✓</span>Spectator zones clearly marked for safety</div>
+            <div class="checklist-item"><span class="checklist-check">✓</span>Cut-off times enforced for runner safety</div>
+            <div class="checklist-item"><span class="checklist-check">✓</span>Sweep vehicle follows the final runner</div>
+          </div>
+          <div>
+            <h2 class="t-display t-h2 mb-16">Getting to the Start</h2>
+            <p class="text-mid mb-12">${CONFIG.transport.raceDay}</p>
+            <p class="text-mid mb-12"><strong>Parking:</strong> Designated parking areas near the start line. Arrive early to allow for security screening.</p>
+            <p class="text-mid"><strong>Spectators:</strong> Best viewing points are at KM 0 (Start), KM 15 (Cultural Gate), KM 21 (Half Finish), and KM 42 (Finish).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderRaceWeek() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--copper mb-12">Race Week</span>
+        <h1 class="t-display t-h1 page-hero__title">Race Week & Expo</h1>
+        <p class="page-hero__desc">Everything you need for a smooth race week — expo, bib collection, schedule.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- Expo Info -->
+        <div class="grid-2 mb-48" style="gap:32px">
+          <div>
+            <h2 class="t-display t-h2 mb-16">The Explorer Expo</h2>
+            <p class="text-mid mb-16">The Explorer Expo is your race-week hub — collect your bib, browse sponsor activations, explore the Tourism Village, enjoy live cultural performances, and connect with fellow runners.</p>
+            <div style="background:var(--cream-dark);padding:20px;border-radius:var(--radius);margin-bottom:16px">
+              <p style="font-weight:700;color:var(--navy);margin-bottom:8px">📍 Jinja Sports Ground</p>
+              <p class="t-small text-mid">Thursday & Friday: 9:00 AM – 6:00 PM</p>
+            </div>
+            <h3 style="font-weight:700;margin-bottom:8px">What to bring for bib collection:</h3>
+            <div class="checklist-item"><span class="checklist-check">✓</span>Photo ID (national ID, passport, or driving permit)</div>
+            <div class="checklist-item"><span class="checklist-check">✓</span>Registration confirmation (email/SMS)</div>
+            <div class="checklist-item"><span class="checklist-check">✓</span>Payment proof if paying on-site</div>
+          </div>
+          <div>
+            <h3 style="font-weight:700;margin-bottom:16px">Bib Collection Steps</h3>
+            <div class="steps">
+              <div class="step-item"><div class="step-num">1</div><div class="step-content"><div class="step-title">Go to the Registration Desk</div><div class="step-desc">Present your ID and confirmation.</div></div></div>
+              <div class="step-item"><div class="step-num">2</div><div class="step-content"><div class="step-title">Collect your race kit</div><div class="step-desc">Bib, timing chip, t-shirt, and runner's bag.</div></div></div>
+              <div class="step-item"><div class="step-num">3</div><div class="step-content"><div class="step-title">Sign the waiver</div><div class="step-desc">Complete the race waiver at the desk.</div></div></div>
+              <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-title">Explore the Expo</div><div class="step-desc">Visit sponsor booths, the Tourism Village, and cultural showcase.</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Schedule -->
+        <h2 class="t-display t-h2 mb-24">Race Week Schedule</h2>
+        <div class="mb-48">
+          ${CONFIG.raceWeekSchedule.map(day => `
+            <div class="schedule-block">
+              <div class="schedule-block__header">${day.day}</div>
+              <div class="schedule-block__events">
+                ${day.events.map(ev => `<div class="schedule-block__event">${ev}</div>`).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Race Day Checklist -->
+        <h2 class="t-display t-h2 mb-24">Race Day Checklist</h2>
+        <div class="grid-2 mb-48">
+          <div>
+            <h3 style="font-weight:700;margin-bottom:12px">Must-have</h3>
+            ${['Race bib (pinned to front)', 'Timing chip (attached to shoe)', 'Running shoes & gear', 'Photo ID', 'Water bottle (optional)'].map(i => `<div class="checklist-item"><span class="checklist-check">✓</span>${i}</div>`).join('')}
+          </div>
+          <div>
+            <h3 style="font-weight:700;margin-bottom:12px">Recommended</h3>
+            ${['Sunscreen & cap', 'Energy gels/snacks', 'Phone for photos', 'Post-race change of clothes', 'Positive energy! 🎉'].map(i => `<div class="checklist-item"><span class="checklist-check">✓</span>${i}</div>`).join('')}
+          </div>
+        </div>
+
+        <!-- Help Desk -->
+        <div style="background:var(--cream-dark);border-radius:var(--radius-lg);padding:32px;text-align:center">
+          <h3 class="t-display t-h3 mb-12">Need Help During Race Week?</h3>
+          <p class="text-mid mb-16">Visit the Help Desk at the Expo or contact us directly.</p>
+          <div class="gap-center">
+            <a href="https://wa.me/${S.whatsapp}" target="_blank" class="btn btn--whatsapp btn--sm">💬 WhatsApp</a>
+            <a href="mailto:${S.email}" class="btn btn--outline btn--sm">📧 Email Us</a>
+            <a href="tel:${S.phone.replace(/\s/g, '')}" class="btn btn--outline btn--sm">📞 ${S.phone}</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderExploreJinja() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--green mb-12">Tourism</span>
+        <h1 class="t-display t-h1 page-hero__title">Explore Jinja</h1>
+        <p class="page-hero__desc">Plan your Explorer Weekend in Uganda's adventure capital — at the source of the Nile.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- Itineraries -->
+        <div class="section-head section-head--left">
+          <h2 class="t-display t-h2 section-head__title">Weekend Itineraries</h2>
+          <p class="section-head__desc">Three curated plans to make the most of your race weekend in Jinja.</p>
+        </div>
+        <div class="grid-3 mb-48">
+          ${CONFIG.itineraries.map(it => `
+            <div class="itinerary-card">
+              <div class="itinerary-card__header" style="background:linear-gradient(135deg,${it.color},${it.color}cc)">
+                <div class="itinerary-card__emoji">${it.emoji}</div>
+                <div class="itinerary-card__title">${it.title}</div>
+              </div>
+              <div class="itinerary-card__body">
+                ${it.highlights.map(h => `
+                  <div class="itinerary-card__item">
+                    <div class="itinerary-card__bullet" style="background:${it.color}"></div>
+                    ${h}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Explorer Guides -->
+        <h2 class="t-display t-h2 mb-24">Explorer Guides</h2>
+        <div class="grid-5 mb-48">
+          ${[
+            { title: 'Adventure', emoji: '🌊', desc: 'Rafting, bungee, kayaking, quad biking' },
+            { title: 'Culture', emoji: '🎶', desc: 'Busoga heritage, music, crafts, history' },
+            { title: 'Food & Drink', emoji: '🍽️', desc: 'Local cuisine, rolex, Nile-side dining' },
+            { title: 'Where to Stay', emoji: '🏨', desc: 'Hotels, lodges, camps, hostels' },
+            { title: 'Transport', emoji: '🚌', desc: 'Getting here and getting around' },
+          ].map(g => `
+            <div class="pillar-card">
+              <span class="pillar-card__icon">${g.emoji}</span>
+              <h3 class="pillar-card__title">${g.title}</h3>
+              <p class="pillar-card__desc">${g.desc}</p>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Accommodation -->
+        <h2 class="t-display t-h2 mb-24">Where to Stay</h2>
+        <p class="text-mid mb-24">Recommended accommodation partners for race weekend. Book early to secure the best rates.</p>
+        <div class="grid-2 mb-48">
+          ${CONFIG.accommodation.map(a => `
+            <div class="accom-card">
+              <div style="display:flex;justify-content:space-between;align-items:start">
+                <h3 class="accom-card__name">${a.name}</h3>
+                <span class="accom-card__type badge ${a.type === 'Luxury' ? 'badge--gold' : a.type === 'Budget' ? 'badge--green' : 'badge--navy'}">${a.type}</span>
+              </div>
+              <p class="accom-card__detail">${a.desc}</p>
+              <p class="accom-card__detail">📍 ${a.location}</p>
+              <p class="accom-card__price">${a.price}</p>
+              <p class="accom-card__detail">📞 ${a.phone}</p>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Transport -->
+        <h2 class="t-display t-h2 mb-24">Getting to Jinja</h2>
+        <div class="grid-2 mb-32">
+          <div>
+            <h3 style="font-weight:700;margin-bottom:8px">From Entebbe Airport</h3>
+            <p class="text-mid t-small mb-16">${CONFIG.transport.fromEntebbe}</p>
+            <h3 style="font-weight:700;margin-bottom:8px">From Kampala</h3>
+            <p class="text-mid t-small">${CONFIG.transport.fromKampala}</p>
+          </div>
+          <div>
+            <h3 style="font-weight:700;margin-bottom:8px">Within Jinja</h3>
+            <p class="text-mid t-small mb-16">${CONFIG.transport.local}</p>
+            <h3 style="font-weight:700;margin-bottom:8px">Race Day Shuttles</h3>
+            <p class="text-mid t-small">${CONFIG.transport.raceDay}</p>
+          </div>
+        </div>
+
+        <div class="gap-center mt-32">
+          <a href="#/register" class="btn btn--gold" onclick="trackEvent('register_click','explore')">Register Now</a>
+          <a href="#" class="btn btn--outline" onclick="trackEvent('itinerary_click','pdf_download')">📥 Download Itinerary PDF</a>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderCulture() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--copper mb-12">Culture</span>
+        <h1 class="t-display t-h1 page-hero__title">The Explorer Sound of Busoga</h1>
+        <p class="page-hero__desc">Hear the instruments that will power your race experience — the living heritage of Busoga Kingdom.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- Filters -->
+        <div class="filter-tabs" id="soundboardFilters">
+          <button class="filter-tab active" onclick="filterInstruments('All',this)">All</button>
+          <button class="filter-tab" onclick="filterInstruments('Protocol',this)">Protocol</button>
+          <button class="filter-tab" onclick="filterInstruments('Hype',this)">Hype</button>
+          <button class="filter-tab" onclick="filterInstruments('Chill',this)">Chill</button>
+          <button class="filter-tab" onclick="filterInstruments('Story',this)">Story</button>
+        </div>
+
+        <!-- Instrument Grid -->
+        <div class="grid-3 mb-48" id="instrumentGrid">
+          ${CONFIG.instruments.map(inst => `
+            <div class="instrument-card" data-tag="${inst.tag}">
+              <div class="instrument-card__visual">
+                <span class="instrument-card__emoji">${inst.emoji}</span>
+                <button class="instrument-card__play" onclick="event.stopPropagation();playSound('${inst.id}',this)" title="Play ${inst.name}" id="play-${inst.id}">▶</button>
+              </div>
+              <div class="instrument-card__body">
+                <h3 class="instrument-card__name">${inst.name}</h3>
+                <span class="badge badge--${inst.tag === 'Protocol' ? 'gold' : inst.tag === 'Hype' ? 'copper' : inst.tag === 'Chill' ? 'teal' : 'navy'} instrument-card__tag">${inst.tag}</span>
+                <p class="instrument-card__desc">${inst.desc}</p>
+                <p class="instrument-card__best">🎯 ${inst.best}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- TWEGAITE BLOCK -->
+        <div class="twegaite-block">
+          <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+            <div style="flex:1;min-width:280px">
+              <div style="font-size:2rem;margin-bottom:12px">🤝</div>
+              <h2 class="twegaite-block__title">Twegaite — Come Together</h2>
+              <p class="twegaite-block__sub">"Twegaite" means "Come Together" in Lusoga</p>
+              <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;margin-bottom:24px">Join the Twegaite movement — pledge to make the Jinja Explorer Marathon a celebration of community, culture, and unity.</p>
+              <div class="pledge-options" id="pledgeOptions">
+                <div class="pledge-option" onclick="selectPledge(this,'volunteer')">🙋 Volunteer</div>
+                <div class="pledge-option" onclick="selectPledge(this,'friend')">👫 Bring a Friend</div>
+                <div class="pledge-option" onclick="selectPledge(this,'sponsor-runner')">💛 Sponsor a Runner</div>
+                <div class="pledge-option" onclick="selectPledge(this,'donate')">🎁 Donate</div>
+              </div>
+            </div>
+            <div style="flex:1;min-width:280px">
+              <div id="twegaiteForm">
+                <div class="form-group">
+                  <label class="form-label" style="color:rgba(255,255,255,0.5)">Email *</label>
+                  <input type="email" id="pledgeEmail" class="form-input" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:white" placeholder="you@email.com">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="color:rgba(255,255,255,0.5)">Phone</label>
+                  <input type="tel" id="pledgePhone" class="form-input" style="background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15);color:white" placeholder="+256 7XX XXX XXX">
+                </div>
+                <input type="hidden" id="pledgeType" value="">
+                <div class="form-group">
+                  <label class="form-check" style="color:rgba(255,255,255,0.5)">
+                    <input type="checkbox" id="pledgeConsent">
+                    I consent to receive communications about JEM and Twegaite initiatives.
+                  </label>
+                </div>
+                <button class="btn btn--gold" style="width:100%" onclick="submitPledge()">Take the Pledge</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider" style="border-color:rgba(255,255,255,0.1)"></div>
+
+        <!-- Credits -->
+        <div class="mt-48" style="max-width:600px;margin-left:auto;margin-right:auto;text-align:center">
+          <h3 class="t-display t-h3 mb-16">Cultural Credits & Acknowledgements</h3>
+          <p class="text-mid t-small mb-12">The Busoga Soundboard is developed in collaboration with cultural custodians, musicians, and the Busoga Kingdom. All instrument recordings are curated with respect for tradition and proper cultural protocols.</p>
+          <p class="text-light t-xs">Instruments and descriptions are subject to final curation. Audio recordings are placeholders pending studio sessions with approved musicians.</p>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderResults() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--gold mb-12">Results</span>
+        <h1 class="t-display t-h1 page-hero__title">Results & Winners</h1>
+        <p class="page-hero__desc">Race results, winner tables, and highlights from JEM 2026.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container text-center" style="max-width:700px">
+        <div style="background:var(--white);border-radius:var(--radius-xl);padding:64px 32px;border:1px solid var(--border-light)">
+          <div style="font-size:3rem;margin-bottom:16px">🏅</div>
+          <h2 class="t-display t-h2 mb-12">Results Coming Soon</h2>
+          <p class="text-mid mb-24">Official results will be published here after the race in ${S.date}. Results will be powered by our official timing partner.</p>
+          <p class="text-mid mb-32">You will be able to search by name or bib number, view category winners, and download full results.</p>
+          <div class="gap-center">
+            <a href="#" class="btn btn--outline btn--sm" style="opacity:0.5;pointer-events:none">🔗 Search Results (coming soon)</a>
+            <a href="#" class="btn btn--outline btn--sm" style="opacity:0.5;pointer-events:none">📥 Download Full Results</a>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <h3 class="t-display t-h3 mb-16">Photo Gallery</h3>
+        <p class="text-mid mb-24">Race day photos will be shared here after the event.</p>
+        <div class="gallery-grid">
+          ${Array(8).fill(0).map((_, i) => `<div class="gallery-item">📷</div>`).join('')}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderSponsors() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--gold mb-12">Partners</span>
+        <h1 class="t-display t-h1 page-hero__title">Sponsor the Jinja Explorer Marathon</h1>
+        <p class="page-hero__desc">Partner with East Africa's premier destination marathon. Reach runners, adventurers, and cultural enthusiasts.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- Why Sponsor -->
+        <div class="grid-2 mb-48" style="gap:40px;align-items:center">
+          <div>
+            <h2 class="t-display t-h2 mb-16">Why Sponsor JEM?</h2>
+            <p class="text-mid mb-16">The Jinja Explorer Marathon offers a unique brand activation opportunity — reaching local, regional, and international audiences across sport, tourism, and culture.</p>
+            <p class="text-mid mb-16">Your brand will be seen at the start line, on the course, at the Expo, in digital media, and across our Tourism Village — connecting with an engaged, active audience.</p>
+            <div class="grid-2" style="gap:12px">
+              ${['2,000+ Runners (target)', '10,000+ Spectators', '50,000+ Digital reach', '4-day Expo & Tourism Village'].map(s => `
+                <div style="background:var(--cream-dark);padding:12px;border-radius:var(--radius-sm);font-size:0.85rem;font-weight:600;text-align:center">${s}</div>
+              `).join('')}
+            </div>
+          </div>
+          <div style="background:linear-gradient(135deg,var(--navy-mid),var(--navy-deep));border-radius:var(--radius-lg);height:320px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:2rem">
+            📊 Audience Infographic
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Tiers -->
+        <h2 class="t-display t-h2 mb-24 text-center">Sponsorship Packages</h2>
+        <div class="grid-4 mb-48">
+          ${CONFIG.sponsorTiers.map((t, i) => `
+            <div class="tier-card ${i === 0 ? 'tier-card--featured' : ''}">
+              <div class="tier-card__header">
+                ${i === 0 ? '<span class="badge badge--gold mb-8">Flagship</span>' : ''}
+                <h3 class="tier-card__name">${t.tier}</h3>
+                <div class="tier-card__price">${t.price}</div>
+              </div>
+              <div class="tier-card__body">
+                ${t.perks.map(p => `<div class="tier-card__perk">${p}</div>`).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Activation Inventory -->
+        <h2 class="t-display t-h2 mb-24">Activation Inventory</h2>
+        <div class="table-wrap mb-48">
+          <table class="activation-table">
+            <thead>
+              <tr><th>Activation</th><th>Title</th><th>Gold</th><th>Silver</th><th>Community</th></tr>
+            </thead>
+            <tbody>
+              ${[
+                ['Start/Finish line branding','✓','—','—','—'],
+                ['Km gate branding (per gate)','✓','✓ (2)','—','—'],
+                ['Expo booth','Headline','Premium','Standard','Tourism Village'],
+                ['Bib & medal logo','✓','✓','—','—'],
+                ['Digital & social media','Full','Featured','Mentions','Mentions'],
+                ['VIP hospitality','20 pax','10 pax','5 pax','2 pax'],
+                ['Culture stage naming','✓','—','—','—'],
+                ['Hydration station','✓','✓','✓','—'],
+              ].map(row => `
+                <tr>${row.map((c,i) => `<td${i===0?' style="font-weight:600"':''}>${c}</td>`).join('')}</tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="gap-center mb-48">
+          <a href="#" class="btn btn--navy" onclick="trackEvent('proposal_download_click')">📥 Download Sponsorship Proposal</a>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Sponsor Inquiry Form -->
+        <div style="max-width:600px;margin:0 auto">
+          <h2 class="t-display t-h2 mb-24 text-center">Get in Touch</h2>
+          <div id="sponsorFormContainer">
+            <div id="sponsorForm">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Your Name *</label>
+                  <input type="text" id="spName" name="name" class="form-input" placeholder="Full name">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Organisation *</label>
+                  <input type="text" id="spOrg" name="org" class="form-input" placeholder="Company / brand">
+                </div>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Email *</label>
+                  <input type="email" id="spEmail" name="email" class="form-input" placeholder="you@company.com">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Phone</label>
+                  <input type="tel" id="spPhone" name="phone" class="form-input" placeholder="+256 7XX XXX XXX">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Interested Package</label>
+                <select id="spBudget" name="budget" class="form-select">
+                  <option value="">Select a tier</option>
+                  ${CONFIG.sponsorTiers.map(t => `<option value="${t.tier}">${t.tier} — ${t.price}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Message</label>
+                <textarea id="spMessage" name="message" class="form-textarea" rows="4" placeholder="Tell us about your brand and partnership goals..."></textarea>
+              </div>
+              <div class="ohnohoney">
+                <input type="text" name="website" id="spHoney" tabindex="-1" autocomplete="off">
+              </div>
+              <button class="btn btn--gold btn--lg" style="width:100%" onclick="submitSponsorInquiry()">Send Inquiry</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderMedia() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--navy mb-12">Press</span>
+        <h1 class="t-display t-h1 page-hero__title">Media Centre</h1>
+        <p class="page-hero__desc">Press kit, releases, and media resources for the Jinja Explorer Marathon.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <!-- Media Kit -->
+        <div style="background:var(--white);border-radius:var(--radius-lg);padding:32px;border:1px solid var(--border-light);text-align:center;margin-bottom:48px">
+          <h2 class="t-display t-h2 mb-12">Media Kit</h2>
+          <p class="text-mid mb-24">Download logos, brand guidelines, photos, and event fact sheet.</p>
+          <a href="#" class="btn btn--navy">📥 Download Media Kit (PDF)</a>
+        </div>
+
+        <!-- Press Releases -->
+        <h2 class="t-display t-h2 mb-24">Press Releases</h2>
+        <div class="grid-2 mb-48">
+          ${[
+            { title: 'Jinja Explorer Marathon Announced', date: 'February 2026', desc: 'Official announcement of the inaugural Jinja Explorer Marathon.' },
+            { title: 'Registration Opens for JEM 2026', date: 'Coming Soon', desc: 'Early bird registration opens with four race categories.' },
+            { title: 'Busoga Soundboard Partnership', date: 'Coming Soon', desc: 'Cultural partnership with Busoga Kingdom announced.' },
+          ].map(pr => `
+            <div class="card">
+              <div class="card__body">
+                <span class="badge badge--navy mb-12">${pr.date}</span>
+                <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:8px">${pr.title}</h3>
+                <p class="t-small text-mid">${pr.desc}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Photo Gallery -->
+        <h2 class="t-display t-h2 mb-24">Photo Gallery</h2>
+        <p class="text-mid mb-24">High-resolution images from the event. Available for editorial use with credit.</p>
+        <div class="gallery-grid mb-48">
+          ${Array(8).fill(0).map(() => `<div class="gallery-item">📷</div>`).join('')}
+        </div>
+
+        <!-- Video -->
+        <h2 class="t-display t-h2 mb-24">Videos</h2>
+        <div class="grid-2">
+          <div style="background:linear-gradient(135deg,var(--navy-mid),var(--navy-deep));border-radius:var(--radius-lg);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:2rem">▶ Promo Video</div>
+          <div style="background:linear-gradient(135deg,var(--navy-mid),var(--navy-deep));border-radius:var(--radius-lg);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:2rem">▶ Course Preview</div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderContact() {
+  return `
+    <section class="page-hero">
+      <div class="container">
+        <span class="badge badge--gold mb-12">Contact</span>
+        <h1 class="t-display t-h1 page-hero__title">Get in Touch</h1>
+        <p class="page-hero__desc">Questions about the race, sponsorship, or tourism? We'd love to hear from you.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="grid-2" style="gap:48px;align-items:start">
+          <!-- Contact Form -->
+          <div>
+            <h2 class="t-display t-h2 mb-24">Send Us a Message</h2>
+            <div id="contactFormContainer">
+              <div id="contactForm">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Name *</label>
+                    <input type="text" id="ctName" name="name" class="form-input" placeholder="Your name">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Email *</label>
+                    <input type="email" id="ctEmail" name="email" class="form-input" placeholder="you@email.com">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Subject</label>
+                  <select id="ctSubject" name="subject" class="form-select">
+                    <option value="">Select topic</option>
+                    <option>Registration query</option>
+                    <option>Sponsorship inquiry</option>
+                    <option>Tourism & accommodation</option>
+                    <option>Media & press</option>
+                    <option>Volunteering</option>
+                    <option>General inquiry</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Message *</label>
+                  <textarea id="ctMessage" name="message" class="form-textarea" rows="5" placeholder="How can we help?"></textarea>
+                </div>
+                <div class="ohnohoney">
+                  <input type="text" name="website" id="ctHoney" tabindex="-1" autocomplete="off">
+                </div>
+                <button class="btn btn--gold btn--lg" style="width:100%" onclick="submitContactForm()">Send Message</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Info -->
+          <div>
+            <h2 class="t-display t-h2 mb-24">Quick Contact</h2>
+
+            <a href="https://wa.me/${S.whatsapp}" target="_blank" class="btn btn--whatsapp" style="width:100%;margin-bottom:16px">
+              💬 Chat on WhatsApp
+            </a>
+
+            <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;border:1px solid var(--border-light);margin-bottom:24px">
+              <h3 style="font-weight:700;margin-bottom:16px">Contact Details</h3>
+              <div style="font-size:0.9rem;color:var(--text-mid)">
+                <p style="margin-bottom:10px">📧 <a href="mailto:${S.email}" style="color:var(--gold)">${S.email}</a></p>
+                <p style="margin-bottom:10px">📞 <a href="tel:${S.phone.replace(/\s/g, '')}" style="color:var(--gold)">${S.phone}</a></p>
+                <p>📍 Jinja City, Uganda</p>
+              </div>
+            </div>
+
+            <div style="background:var(--white);border-radius:var(--radius-lg);padding:24px;border:1px solid var(--border-light);margin-bottom:24px">
+              <h3 style="font-weight:700;margin-bottom:16px">Follow Us</h3>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <a href="${S.socials.facebook}" target="_blank" class="btn btn--outline btn--sm">Facebook</a>
+                <a href="${S.socials.instagram}" target="_blank" class="btn btn--outline btn--sm">Instagram</a>
+                <a href="${S.socials.twitter}" target="_blank" class="btn btn--outline btn--sm">X / Twitter</a>
+                <a href="${S.socials.youtube}" target="_blank" class="btn btn--outline btn--sm">YouTube</a>
+                <a href="${S.socials.strava}" target="_blank" class="btn btn--outline btn--sm">Strava</a>
+              </div>
+            </div>
+
+            <!-- Map placeholder -->
+            <div style="background:linear-gradient(135deg,var(--navy-mid),var(--navy-deep));border-radius:var(--radius-lg);height:200px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:1rem">
+              🗺️ Map Embed — Jinja City
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+/* ─── PAGE ROUTER ─── */
+
+/* ─── ADMIN PANEL (LocalStorage CMS) ─── */
+function renderAdmin() {
+  const saved = localStorage.getItem('JEM_CONFIG');
+  const current = saved ? JSON.parse(saved) : CONFIG;
+
+  const site = current.site || CONFIG.site;
+
+  return `
+    <section class="adm-wrap">
+      <div class="container">
+        <div class="adm-header">
+          <div>
+            <h1 class="adm-title">Admin Panel</h1>
+            <p class="adm-sub">Edit key site content and save to <strong>localStorage</strong> (great for GitHub Pages testing).</p>
+          </div>
+          <div class="adm-actions">
+            <button class="btn btn--ghost" onclick="adminReset()">Reset</button>
+            <button class="btn btn--gold" onclick="adminSave()">Save</button>
+          </div>
+        </div>
+
+        <div class="adm-grid">
+          <div class="adm-card">
+            <h3>Brand & Hero</h3>
+            <label class="adm-label">Site name</label>
+            <input id="adm_name" class="adm-input" value="${escapeHtml(site.name || '')}" />
+
+            <label class="adm-label">Tagline</label>
+            <input id="adm_tagline" class="adm-input" value="${escapeHtml(site.tagline || '')}" />
+
+            <label class="adm-label">Date</label>
+            <input id="adm_date" class="adm-input" value="${escapeHtml(site.date || '')}" />
+
+            <label class="adm-label">Location</label>
+            <input id="adm_location" class="adm-input" value="${escapeHtml(site.location || '')}" />
+
+            <label class="adm-label">Logo path (relative)</label>
+            <input id="adm_logo" class="adm-input" value="${escapeHtml(site.logo || '')}" placeholder="./assets/logo.png" />
+
+            <p class="adm-hint">Tip: Put your logo file in the repo root or <code>assets/</code> and use a relative path like <code>assets/logo.png</code>.</p>
+          </div>
+
+          <div class="adm-card">
+            <h3>Contact</h3>
+            <label class="adm-label">Email</label>
+            <input id="adm_email" class="adm-input" value="${escapeHtml(site.email || '')}" />
+
+            <label class="adm-label">Phone</label>
+            <input id="adm_phone" class="adm-input" value="${escapeHtml(site.phone || '')}" />
+
+            <label class="adm-label">Address</label>
+            <input id="adm_address" class="adm-input" value="${escapeHtml(site.address || '')}" />
+
+            <label class="adm-label">Short story</label>
+            <textarea id="adm_story" class="adm-textarea" rows="6">${escapeHtml(site.story || '')}</textarea>
+          </div>
+
+          <div class="adm-card adm-card--wide">
+            <h3>Advanced (JSON)</h3>
+            <p class="adm-sub">If you know what you're doing, you can edit the full config JSON.</p>
+            <textarea id="adm_json" class="adm-textarea adm-json" rows="16">${escapeHtml(JSON.stringify(current, null, 2))}</textarea>
+            <p class="adm-hint">Saving JSON will overwrite your current local override. Refresh to see changes.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function adminSave() {
+  try {
+    // If JSON is edited, prefer it.
+    const jsonRaw = document.getElementById('adm_json').value.trim();
+    let parsed = JSON.parse(jsonRaw);
+
+    // Also apply basic fields (in case user didn't touch JSON)
+    parsed.site = parsed.site || {};
+    parsed.site.name = document.getElementById('adm_name').value.trim();
+    parsed.site.tagline = document.getElementById('adm_tagline').value.trim();
+    parsed.site.date = document.getElementById('adm_date').value.trim();
+    parsed.site.location = document.getElementById('adm_location').value.trim();
+    parsed.site.logo = document.getElementById('adm_logo').value.trim() || parsed.site.logo;
+
+    parsed.site.email = document.getElementById('adm_email').value.trim();
+    parsed.site.phone = document.getElementById('adm_phone').value.trim();
+    parsed.site.address = document.getElementById('adm_address').value.trim();
+    parsed.site.story = document.getElementById('adm_story').value;
+
+    localStorage.setItem('JEM_CONFIG', JSON.stringify(parsed));
+    showToast('Saved! Refreshing…');
+    setTimeout(() => window.location.reload(), 600);
+  } catch (e) {
+    console.error(e);
+    showToast('Could not save. Check your JSON for errors.', 'error');
+  }
+}
+
+function adminReset() {
+  localStorage.removeItem('JEM_CONFIG');
+  showToast('Reset complete. Refreshing…');
+  setTimeout(() => window.location.reload(), 600);
+}
+
+const routes = {
+  '/': renderHome,
+  '/about': renderAbout,
+  '/register': renderRegister,
+  '/course': renderCourse,
+  '/race-week': renderRaceWeek,
+  '/explore-jinja': renderExploreJinja,
+  '/culture': renderCulture,
+  '/results': renderResults,
+  '/sponsors': renderSponsors,
+  '/media': renderMedia,
+  '/contact': renderContact,
+  '/admin': renderAdmin,
+};
+
+function renderPage() {
+  const route = getRoute();
+  const renderer = routes[route] || routes['/'];
+  app.innerHTML = renderer();
+  updateActiveLinks(route);
+  updateMeta(route);
+  window.scrollTo(0, 0);
+}
+
+window.addEventListener('hashchange', renderPage);
+window.addEventListener('DOMContentLoaded', renderPage);
+
+/* ─── FAQ TOGGLE ─── */
+function toggleFaq(el) {
+  el.classList.toggle('open');
+}
+
+/* ─── SOUNDBOARD ─── */
+let currentAudio = null;
+let currentPlayBtn = null;
+
+function playSound(instrumentId, btn) {
+  trackEvent('audio_play', instrumentId);
+
+  // Stop current if playing
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+    if (currentPlayBtn) { currentPlayBtn.textContent = '▶'; currentPlayBtn.classList.remove('playing'); }
+  }
+
+  if (currentPlayBtn === btn) { currentPlayBtn = null; return; }
+
+  // Create placeholder audio tone using Web Audio API
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    // Different frequencies for different instruments
+    const freqs = { embaire: 523, bigwala: 220, drums: 110, shakers: 880, flute: 659, lyre: 440 };
+    const types = { embaire: 'triangle', bigwala: 'sawtooth', drums: 'square', shakers: 'sine', flute: 'sine', lyre: 'triangle' };
+
+    osc.frequency.value = freqs[instrumentId] || 440;
+    osc.type = types[instrumentId] || 'sine';
+    gain.gain.value = 0.15;
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 2);
+
+    btn.textContent = '⏸';
+    btn.classList.add('playing');
+    currentPlayBtn = btn;
+
+    setTimeout(() => {
+      btn.textContent = '▶';
+      btn.classList.remove('playing');
+      currentPlayBtn = null;
+    }, 2000);
+  } catch (e) {
+    showToast('Audio placeholder — real recordings coming soon', 'error');
+  }
+}
+
+function filterInstruments(tag, btn) {
+  // Update active tab
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Filter cards
+  document.querySelectorAll('.instrument-card').forEach(card => {
+    if (tag === 'All' || card.dataset.tag === tag) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+/* ─── PLEDGE SELECTION ─── */
+let selectedPledge = '';
+
+function selectPledge(el, type) {
+  document.querySelectorAll('.pledge-option').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  selectedPledge = type;
+  const h = document.getElementById('pledgeType');
+  if (h) h.value = type;
+}
+
+/* ─── FORM SUBMISSIONS ─── */
+
+function submitRegistration() {
+  clearErrors('registrationForm');
+  const firstName = document.getElementById('regFirstName').value.trim();
+  const lastName = document.getElementById('regLastName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  const category = document.getElementById('regCategory').value;
+  const tshirt = document.getElementById('regTshirt').value;
+  const terms = document.getElementById('regTerms').checked;
+  const honey = document.getElementById('regHoney').value;
+
+  if (honey) return; // Bot detected
+
+  let valid = true;
+  if (!firstName) { setFieldError('regFirstName', 'First name is required'); valid = false; }
+  if (!lastName) { setFieldError('regLastName', 'Last name is required'); valid = false; }
+  if (!email || !validateEmail(email)) { setFieldError('regEmail', 'Valid email is required'); valid = false; }
+  if (!phone || !validatePhone(phone)) { setFieldError('regPhone', 'Valid phone number is required'); valid = false; }
+  if (!category) { setFieldError('regCategory', 'Select a category'); valid = false; }
+  if (!tshirt) { setFieldError('regTshirt', 'Select a size'); valid = false; }
+  if (!terms) { showToast('Please accept the terms and conditions', 'error'); valid = false; }
+
+  if (!valid) return;
+
+  trackEvent('register_click', { category, email });
+
+  // Show success
+  document.getElementById('regFormContainer').innerHTML = `
+    <div class="form-success">
+      <div style="font-size:2.5rem;margin-bottom:12px">🎉</div>
+      <h3 style="font-size:1.2rem;margin-bottom:8px;color:var(--success)">Registration Received!</h3>
+      <p style="color:var(--text-mid);font-size:0.9rem;margin-bottom:16px">Thank you, ${firstName}! Your registration for the <strong>${category}</strong> has been received.</p>
+      <p style="color:var(--text-mid);font-size:0.85rem">A confirmation email will be sent to <strong>${email}</strong> with payment instructions. Please complete payment within 48 hours to secure your place.</p>
+      <p style="color:var(--text-light);font-size:0.8rem;margin-top:16px">Registration ID: JEM-${Date.now().toString(36).toUpperCase()}</p>
+    </div>
+  `;
+
+  showToast('Registration submitted successfully! 🎉');
+}
+
+function submitSponsorInquiry() {
+  const name = document.getElementById('spName').value.trim();
+  const org = document.getElementById('spOrg').value.trim();
+  const email = document.getElementById('spEmail').value.trim();
+  const honey = document.getElementById('spHoney').value;
+
+  if (honey) return;
+  if (!name || !org || !email || !validateEmail(email)) {
+    showToast('Please fill in name, organisation, and a valid email', 'error');
+    return;
+  }
+
+  trackEvent('sponsor_inquiry_submit', { name, org, email });
+
+  document.getElementById('sponsorFormContainer').innerHTML = `
+    <div class="form-success">
+      <div style="font-size:2rem;margin-bottom:12px">🤝</div>
+      <h3 style="color:var(--success)">Inquiry Sent!</h3>
+      <p style="color:var(--text-mid);font-size:0.9rem;margin-top:8px">Thank you, ${name}. We'll get back to you within 2 business days at <strong>${email}</strong>.</p>
+    </div>
+  `;
+
+  showToast('Sponsor inquiry sent! 🤝');
+}
+
+function submitContactForm() {
+  const name = document.getElementById('ctName').value.trim();
+  const email = document.getElementById('ctEmail').value.trim();
+  const message = document.getElementById('ctMessage').value.trim();
+  const honey = document.getElementById('ctHoney').value;
+
+  if (honey) return;
+  if (!name || !email || !validateEmail(email) || !message) {
+    showToast('Please fill in name, email, and message', 'error');
+    return;
+  }
+
+  trackEvent('contact_submit', { name, email });
+
+  document.getElementById('contactFormContainer').innerHTML = `
+    <div class="form-success">
+      <div style="font-size:2rem;margin-bottom:12px">✉️</div>
+      <h3 style="color:var(--success)">Message Sent!</h3>
+      <p style="color:var(--text-mid);font-size:0.9rem;margin-top:8px">Thanks, ${name}. We'll respond to <strong>${email}</strong> as soon as possible.</p>
+    </div>
+  `;
+
+  showToast('Message sent! ✉️');
+}
+
+function submitPledge() {
+  const email = document.getElementById('pledgeEmail').value.trim();
+  const consent = document.getElementById('pledgeConsent').checked;
+
+  if (!email || !validateEmail(email)) {
+    showToast('Please enter a valid email', 'error');
+    return;
+  }
+  if (!consent) {
+    showToast('Please accept the consent checkbox', 'error');
+    return;
+  }
+
+  trackEvent('twegaite_pledge', { email, pledge: selectedPledge || 'general' });
+
+  document.getElementById('twegaiteForm').innerHTML = `
+    <div style="text-align:center;padding:20px">
+      <div style="font-size:2rem;margin-bottom:8px">🤝</div>
+      <h3 style="color:var(--gold);font-size:1.1rem">Welcome to Twegaite!</h3>
+      <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin-top:8px">You've joined the movement. We'll be in touch at <strong style="color:var(--gold)">${email}</strong>.</p>
+    </div>
+  `;
+
+  showToast('Welcome to Twegaite! 🤝');
+}
+
+function submitTwegaiteHome() {
+  const email = document.getElementById('twegaiteEmail').value.trim();
+  if (!email || !validateEmail(email)) {
+    showToast('Please enter a valid email', 'error');
+    return;
+  }
+  trackEvent('newsletter_signup', email);
+  showToast('Welcome to the Explorer community! 🎉');
+  document.getElementById('twegaiteEmail').value = '';
+}
